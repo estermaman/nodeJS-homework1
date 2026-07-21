@@ -1,28 +1,22 @@
 import express from 'express';
-import chalk from 'chalk';
 
-// חובה להוסיף סיומת .js בסוף הנתיב של קבצים מקומיים!
-import coursesRouter from './routes/courses.js';
-import studentsRouter from './routes/students.js';
+// ייבוא הראוטרים
+import studentRouter from './routes/students.js';
+import courseRouter from './routes/courses.js';
+import enrollmentRouter from './routes/enrollments.js';
 
 const app = express();
-const PORT = 3000;
 
+// Middleware לפענוח JSON בבקשות נכנסות
 app.use(express.json());
 
-// נתיב הבית הראשי - http://localhost:3000
-app.get('/', (req, res) => {
-    console.log(chalk.magenta('\n--- 🏠 בקשה הגיעה לנתיב הבית הראשי! ---'));
-    res.json({
-        status: "success",
-        message: "השרת פעיל ועובד כראוי",
-        description: "מערכת ניהול קורסים ותלמידים בגרסה המודרנית ביותר"
-    });
-});
+// רישום הראוטרים לפי נתיבים מרכזיים
+app.use('/api/students', studentRouter);
+app.use('/api/courses', courseRouter);
+app.use('/api/enrollments', enrollmentRouter);
 
-app.use('/courses', coursesRouter);
-app.use('/students', studentsRouter);
-
+// הפעלת השרת
+const PORT = 3000;
 app.listen(PORT, () => {
-    console.log(chalk.green.bold(`\n השרת נדלק בהצלחה ומקשיב בפורט ${PORT}! 🚀`));
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
