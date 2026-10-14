@@ -1,0 +1,120 @@
+סיכום: אימות, אימות קיום, ומשתני סביבה
+שלב 1 — בדיקת קיום עם 404
+מה הבעיה שפתרנו: בקריאות על אובייקט בודד (קבלה, עדכון, מחיקה) — אם המזהה לא קיים, הקוד קודם פשוט החזיר undefined או ערך שגוי, במקום שגיאה ברורה. עכשיו כל קריאה כזו מחזירה 404.
+
+איך: יצרנו אובייקט שגיאה עם מאפיין status בשכבת ה-service, וה-controller קורא אותו:
+
+
+// service/coursesService.js
+export function getCourseById(id) {
+    const course = coursesData.findCourseById(id);
+    if (!course) {
+        const error = new Error(`קורס עם מזהה ${id} לא נמצא`);
+        error.status = 404;   // ← כאן קובעים את הסטטוס
+        throw error;
+    }
+    return course;
+}
+
+// Controllers/coursesController.js
+export function getCourseById(req, res) {
+    try {
+        const id = Number(req.params.id);
+        const course = courseService.getCourseById(id);
+        res.json(course);
+    } catch (error) {
+        // 404 אם לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+הטריק הוא error.status || 500 — אם השגיאה היא "לא נמצא" נקבל 404, וכל שגיאה אחרת (באג אמיתי) תחזור כ-500.
+
+איפה זה יושם: קורסים, תלמידים, הרשמות — בכל אחת מהשכבות (routes → controllers → service → data). בנוסף, הוספנו PUT ו-DELETE לשלוש הישויות.
+
+שתי הגנות שהוספנו בדרך:
+
+עדכון לא יכול לשנות id — ה-service מסנן את השדות המורשים ומתעלם מכל השאר.
+בהרשמה — בדיקת קיום תלמיד וקורס מחזירה 400 (בקשה שגויה), לא 404, כי ההרשמה עצמה קיימת.
+שלב 2 — מידלוור אימות
+מה זה מידלוור: פונקציה שרצה לפני הטיפול בבקשה, ויכולה או לעצור אותה, או להעביר אותה הלאה עם next().
+
+המבנה: (req, res, next) — שלוש תחנות. אם לא קוראים ל-next(), הבקשה נעצרת שם.
+
+הקובץ homework/middleware/auth.js:
+
+
+export function authMiddleware(req, res, next) {
+    console.log(`נקראה בקשה: ${req.method} ${req.originalUrl}`);
+
+    const authKey = req.get('auth-key');   // קריאת ה-header
+
+    if (!authKey || authKey !== AUTH_KEY) {
+        return res.status(401).json({ error: 'לא מורשה - חסר או שגוי auth-key' });
+    }
+
+    next();   // המפתח תקין → ממשיכים
+}
+החיבור לראוטרים — בכל אחד משלושת הקבצים (students.js, courses.js, enrollments.js):
+
+
+router.use(authMiddleware);   // רץ על כל הקריאות ב-router הזה
+ה-console.log הוא לא קישוט — הוא ההוכחה שהמידלוור אכן רץ בכל קריאה. אפשר לראות את השורות בלוג השרת.
+
+ההתנהגות: בלי header auth-key → 401. עם ערך שגוי → 401. עם הערך הנכון → ממשיכים ל-controller.
+
+שלב 3 — משתני סביבה
+מה זה: ערכים שהאפליקציה קוראת מהסביבה ולא מהקוד — כדי שסודות והגדרות לא יישבו בקוד המקור. הסוד היחיד שכתוב בקוד נכנס לגיט, וכל מי שרואה את הריפו רואה אותו. משתני סביבה פותרים את זה.
+
+הספרייה dotenv טוענת קובץ .env (קובץ טקסט של KEY=value) לתוך process.env.
+
+מה עברנו:
+
+לפני	אחרי
+const PORT = 3000;	const PORT = process.env.PORT || 3000;
+const AUTH_KEY = 'demo-key-123';	const AUTH_KEY = process.env.AUTH_KEY;
+ב-homework/index.js — הייבוא הזה חייב להיות ראשון בקובץ:
+
+
+import 'dotenv/config';
+כי הוא ממלא את process.env, וכל קוד שרץ אחריו קורא משם.
+
+ארבעת הקבצים שנוצרו:
+
+קובץ	נכנס לגיט?	מה יש בו
+.env	❌ לא (מוגן)	PORT=3000 ו-AUTH_KEY=demo-key-123
+.env.example	✅ כן	אותה תבנית, עם ערכי דמה
+package.json	✅ כן	נוספה התלות dotenv
+.gitignore	✅ כן	כבר הכיל .env
+הרעיון: .env נשאר במחשב שלך, ו-.env.example מלמד את מי שמוריד את הפרויקט אילו משתנים חסרים לו. מי שמריץ אצלו — מעתיק את הדוגמה ל-.env וממלא ערכים.
+
+איך מריצים ובודקים
+
+cd homework
+node index.js
+הפלט: Server is running on http://localhost:3000
+
+בדיקה עם curl (Git Bash):
+
+
+# בלי מפתח → 401
+curl -i http://localhost:3000/api/courses
+
+# עם המפתח הנכון → 200
+curl -i -H "auth-key: demo-key-123" http://localhost:3000/api/courses
+ב-Thunder Client / Postman: צריך להוסיף header בשם auth-key עם הערך מ-.env. בלי זה תקבלי 401 — זו לא תקלה, זו הגנת האימות עובדת.
+
+תוצאות הבדיקות בפועל
+בדיקה	תוצאה
+השרת עולה על הפורט מ-.env	✅ 3000
+בלי auth-key	✅ 401
+עם auth-key שגוי	✅ 401
+עם auth-key נכון	✅ 200
+קורס לא קיים	✅ 404
+הכל נדחף לגיט: קומיט dc11b5c ל-origin/main.
+
+מה חשוב לזכור מכאן והלאה
+מי שמוריד את הפרויקט לא מקבל .env — זו התכלית. לכן npm install + העתקת .env.example הם תמיד שני הצעדים הראשונים אצל מישהו חדש.
+import 'dotenv/config' תמיד ראשון — אם הוא אחרי ייבוא אחר שקורא ל-process.env, הערך יהיה undefined.
+|| 3000 הוא גיבוי — לא תחליף ל-.env, אלא כדי שהשרת לא ייפול אם המשתנה חסר.
+AUTH_KEY בלי גיבוי בכוונה — אין ברירת מחדל לסוד. אם הוא חסר, כל בקשה תקבל 401, וזה עדיף על סוד קבוע שדולף.
+נקודה פתוחה: npm audit דיווח על 2 חולשות (1 בינונית, 1 קריטית). לא טיפלתי בהן. אם תרצי שאבדוק ממה הן נובעות — תגידי, ואציג לך מה השינוי המוצע לפני שאבצע.
