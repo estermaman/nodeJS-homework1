@@ -1,9 +1,8 @@
 // middleware/auth.js
 
-// מפתח האימות.
-// הערה: בפרויקט אמיתי יש לשמור סוד זה בקובץ .env (משתנה סביבה),
-// ולא לכתוב אותו ישירות בקוד המקור.
-const AUTH_KEY = 'demo-key-123';
+// מפתח האימות - נקרא ממשתנה הסביבה AUTH_KEY שבקובץ .env,
+// כדי שהסוד לא ייכתב ישירות בקוד המקור ולא ייכנס לגיט.
+const AUTH_KEY = process.env.AUTH_KEY;
 
 // מידלוור לבדיקת הרשאה לפי header בשם auth-key
 export function authMiddleware(req, res, next) {

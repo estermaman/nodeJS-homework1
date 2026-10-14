@@ -1,3 +1,7 @@
+// טעינת משתני הסביבה מקובץ .env לתוך process.env
+// חייב להיות הייבוא הראשון, לפני כל קוד שקורא ל-process.env
+import 'dotenv/config';
+
 import express from 'express';
 
 // ייבוא הראוטרים
@@ -16,7 +20,8 @@ app.use('/api/courses', courseRouter);
 app.use('/api/enrollments', enrollmentRouter);
 
 // הפעלת השרת
-const PORT = 3000;
+// הפורט נקרא ממשתנה הסביבה PORT, ואם הוא חסר - ברירת מחדל 3000
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
