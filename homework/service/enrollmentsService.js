@@ -40,3 +40,51 @@ export function getCoursesForStudent(studentId) {
 
     return enrollmentsData.findEnrollmentsByStudentId(studentId);
 }
+
+// 4. שליפת הרשמה בודדת לפי ID (עם בדיקת קיום)
+export function getEnrollmentById(id) {
+    const enrollment = enrollmentsData.findEnrollmentById(id);
+    if (!enrollment) {
+        const error = new Error(`הרשמה עם מזהה ${id} לא נמצאה`);
+        error.status = 404;
+        throw error;
+    }
+    return enrollment;
+}
+
+// 5. עדכון הרשמה קיימת
+export function updateEnrollment(id, enrollmentData) {
+    // אם ההרשמה לא קיימת – getEnrollmentById כבר זורק שגיאה עם סטטוס 404
+    getEnrollmentById(id);
+
+    // מעדכנים רק את studentId ו-courseId, אם נשלחו
+    const allowedData = {};
+    if (enrollmentData.studentId !== undefined) {
+        allowedData.studentId = Number(enrollmentData.studentId);
+    }
+    if (enrollmentData.courseId !== undefined) {
+        allowedData.courseId = Number(enrollmentData.courseId);
+    }
+
+    // אם עודכנו מזהים – בודקים שהם מצביעים על רשומות קיימות
+    if (allowedData.studentId !== undefined && !studentsData.findStudentById(allowedData.studentId)) {
+        const error = new Error(`תלמיד עם מזהה ${allowedData.studentId} לא נמצא במערכת`);
+        error.status = 400;
+        throw error;
+    }
+    if (allowedData.courseId !== undefined && !coursesData.findCourseById(allowedData.courseId)) {
+        const error = new Error(`קורס עם מזהה ${allowedData.courseId} לא נמצא במערכת`);
+        error.status = 400;
+        throw error;
+    }
+
+    return enrollmentsData.updateEnrollment(id, allowedData);
+}
+
+// 6. מחיקת הרשמה
+export function deleteEnrollment(id) {
+    // אם ההרשמה לא קיימת – getEnrollmentById כבר זורק שגיאה עם סטטוס 404
+    getEnrollmentById(id);
+
+    enrollmentsData.deleteEnrollment(id);
+}

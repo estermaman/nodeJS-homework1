@@ -1,4 +1,4 @@
-import * as studentService from '../services/studentsService.js';
+import * as studentService from '../service/studentsService.js';
 
 // שליפת כל התלמידים
 export function getAllStudents(req, res) {
@@ -17,7 +17,8 @@ export function getStudentById(req, res) {
         const student = studentService.getStudentById(id);
         res.json(student);
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        // 404 אם התלמיד לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
     }
 }
 
@@ -38,6 +39,31 @@ export function getStudentAverage(req, res) {
         const average = studentService.getStudentAverage(id);
         res.json({ studentId: id, average: average });
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        // 404 אם התלמיד לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+
+// עדכון תלמיד קיים
+export function updateStudent(req, res) {
+    try {
+        const id = Number(req.params.id);
+        const updatedStudent = studentService.updateStudent(id, req.body);
+        res.json(updatedStudent);
+    } catch (error) {
+        // 404 אם התלמיד לא נמצא, 400 אם הנתונים שגויים, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+
+// מחיקת תלמיד
+export function deleteStudent(req, res) {
+    try {
+        const id = Number(req.params.id);
+        studentService.deleteStudent(id);
+        res.sendStatus(204);
+    } catch (error) {
+        // 404 אם התלמיד לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
     }
 }

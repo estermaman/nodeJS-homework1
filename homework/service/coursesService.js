@@ -10,7 +10,9 @@ export function getAllCourses() {
 export function getCourseById(id) {
     const course = coursesData.findCourseById(id);
     if (!course) {
-        throw new Error(`קורס עם מזהה ${id} לא נמצא`);
+        const error = new Error(`קורס עם מזהה ${id} לא נמצא`);
+        error.status = 404;
+        throw error;
     }
     return course;
 }
@@ -26,4 +28,20 @@ export function createNewCourse(courseData) {
     }
 
     return coursesData.createCourse(courseData);
+}
+
+// 4. עדכון קורס קיים
+export function updateCourse(id, courseData) {
+    // אם הקורס לא קיים – getCourseById כבר זורק שגיאה עם סטטוס 404
+    getCourseById(id);
+
+    return coursesData.updateCourse(id, courseData);
+}
+
+// 5. מחיקת קורס
+export function deleteCourse(id) {
+    // אם הקורס לא קיים – getCourseById כבר זורק שגיאה עם סטטוס 404
+    getCourseById(id);
+
+    coursesData.deleteCourse(id);
 }

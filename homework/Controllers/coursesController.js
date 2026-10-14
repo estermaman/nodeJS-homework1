@@ -1,4 +1,4 @@
-import * as courseService from '../services/coursesService.js';
+import * as courseService from '../service/coursesService.js';
 
 // שליפת כל הקורסים
 export function getAllCourses(req, res) {
@@ -17,7 +17,8 @@ export function getCourseById(req, res) {
         const course = courseService.getCourseById(id);
         res.json(course);
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        // 404 כשהקורס לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
     }
 }
 
@@ -28,5 +29,29 @@ export function createCourse(req, res) {
         res.status(201).json(newCourse);
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+}
+
+// עדכון קורס קיים
+export function updateCourse(req, res) {
+    try {
+        const id = Number(req.params.id);
+        const updatedCourse = courseService.updateCourse(id, req.body);
+        res.json(updatedCourse);
+    } catch (error) {
+        // 404 אם הקורס לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+
+// מחיקת קורס
+export function deleteCourse(req, res) {
+    try {
+        const id = Number(req.params.id);
+        courseService.deleteCourse(id);
+        res.sendStatus(204);
+    } catch (error) {
+        // 404 אם הקורס לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
     }
 }

@@ -20,3 +20,23 @@ export function createEnrollment(studentId, courseId) {
     enrollments.push(newEnrollment);
     return newEnrollment;
 }
+
+export function findEnrollmentById(id) {
+    return enrollments.find(e => e.id === id);
+}
+
+export function updateEnrollment(id, updatedData) {
+    const index = enrollments.findIndex(e => e.id === id);
+    if (index === -1) return null;
+
+    enrollments[index] = { ...enrollments[index], ...updatedData };
+    return enrollments[index];
+}
+
+export function deleteEnrollment(id) {
+    const index = enrollments.findIndex(e => e.id === id);
+    if (index === -1) return false;
+
+    enrollments.splice(index, 1);
+    return true;
+}

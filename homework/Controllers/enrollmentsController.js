@@ -1,4 +1,4 @@
-import * as enrollmentService from '../services/enrollmentsService.js';
+import * as enrollmentService from '../service/enrollmentsService.js';
 
 // שליפת כל ההרשמות
 export function getAllEnrollments(req, res) {
@@ -41,6 +41,43 @@ export function getStudentCourses(req, res) {
         const courses = enrollmentService.getCoursesForStudent(studentId);
         res.json(courses);
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        // 404 אם התלמיד לא נמצא, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+
+// שליפת הרשמה בודדת לפי ID
+export function getEnrollmentById(req, res) {
+    try {
+        const id = Number(req.params.id);
+        const enrollment = enrollmentService.getEnrollmentById(id);
+        res.json(enrollment);
+    } catch (error) {
+        // 404 אם ההרשמה לא נמצאה, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+
+// עדכון הרשמה קיימת
+export function updateEnrollment(req, res) {
+    try {
+        const id = Number(req.params.id);
+        const updatedEnrollment = enrollmentService.updateEnrollment(id, req.body);
+        res.json(updatedEnrollment);
+    } catch (error) {
+        // 404 אם ההרשמה לא נמצאה, 400 אם הנתונים שגויים, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
+    }
+}
+
+// מחיקת הרשמה
+export function deleteEnrollment(req, res) {
+    try {
+        const id = Number(req.params.id);
+        enrollmentService.deleteEnrollment(id);
+        res.sendStatus(204);
+    } catch (error) {
+        // 404 אם ההרשמה לא נמצאה, אחרת 500
+        res.status(error.status || 500).json({ error: error.message });
     }
 }
