@@ -2,13 +2,13 @@
 import * as studentsData from '../data/studentsData.js';
 
 // 1. קבלת כל התלמידים
-export function getAllStudents() {
+export async function getAllStudents() {
     return studentsData.findAllStudents();
 }
 
 // 2. קבלת תלמיד לפי ID עם טיפול במצב שבו הוא לא נמצא
-export function getStudentById(id) {
-    const student = studentsData.findStudentById(id);
+export async function getStudentById(id) {
+    const student = await studentsData.findStudentById(id);
     if (!student) {
         const error = new Error(`תלמיד עם מזהה ${id} לא נמצא`);
         error.status = 404;
@@ -17,11 +17,12 @@ export function getStudentById(id) {
     return student;
 }
 
-// 3. יצירת תלמיד חדש עם בדיקת תקינות נ
-// תונים
-export function createNewStudent(studentData) {
+// 3. יצירת תלמיד חדש עם בדיקת תקינות נתונים
+export async function createNewStudent(studentData) {
     if (!studentData.name || studentData.name.trim() === '') {
-        throw new Error('חובה לספק שם תלמיד');
+        const error = new Error('חובה לספק שם תלמיד');
+        error.status = 400;
+        throw error;
     }
 
     // הגדרת ערך ברירת מחדל לציונים אם לא נשלחו
@@ -34,9 +35,9 @@ export function createNewStudent(studentData) {
 }
 
 // 4. חישוב ממוצע ציונים של תלמיד (לוגיקה עסקית)
-export function getStudentAverage(id) {
-    const student = getStudentById(id); // משתמש בפונקציה שכבר בודקת קיום
-    
+export async function getStudentAverage(id) {
+    const student = await getStudentById(id); // משתמש בפונקציה שכבר בודקת קיום
+
     if (student.grades.length === 0) {
         return 0;
     }
@@ -46,9 +47,9 @@ export function getStudentAverage(id) {
 }
 
 // 5. עדכון תלמיד קיים
-export function updateStudent(id, studentData) {
+export async function updateStudent(id, studentData) {
     // אם התלמיד לא קיים – getStudentById כבר זורק שגיאה עם סטטוס 404
-    getStudentById(id);
+    await getStudentById(id);
 
     // מעדכנים רק שדות מותרים, כדי שלא יוזרקו שדות כמו id
     const allowedData = {};
@@ -68,9 +69,9 @@ export function updateStudent(id, studentData) {
 }
 
 // 6. מחיקת תלמיד
-export function deleteStudent(id) {
+export async function deleteStudent(id) {
     // אם התלמיד לא קיים – getStudentById כבר זורק שגיאה עם סטטוס 404
-    getStudentById(id);
+    await getStudentById(id);
 
-    studentsData.deleteStudent(id);
+    await studentsData.deleteStudent(id);
 }

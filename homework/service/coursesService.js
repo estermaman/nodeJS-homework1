@@ -2,13 +2,13 @@
 import * as coursesData from '../data/coursesData.js';
 
 // 1. קבלת כל הקורסים
-export function getAllCourses() {
+export async function getAllCourses() {
     return coursesData.findAllCourses();
 }
 
 // 2. קבלת קורס לפי ID
-export function getCourseById(id) {
-    const course = coursesData.findCourseById(id);
+export async function getCourseById(id) {
+    const course = await coursesData.findCourseById(id);
     if (!course) {
         const error = new Error(`קורס עם מזהה ${id} לא נמצא`);
         error.status = 404;
@@ -18,30 +18,34 @@ export function getCourseById(id) {
 }
 
 // 3. יצירת קורס חדש עם בדיקת תקינות
-export function createNewCourse(courseData) {
+export async function createNewCourse(courseData) {
     if (!courseData.title || courseData.title.trim() === '') {
-        throw new Error('חובה לספק שם לקורס');
+        const error = new Error('חובה לספק שם לקורס');
+        error.status = 400;
+        throw error;
     }
 
     if (!courseData.hours || courseData.hours <= 0) {
-        throw new Error('מספר שעות הקורס חייב להיות גדול מ-0');
+        const error = new Error('מספר שעות הקורס חייב להיות גדול מ-0');
+        error.status = 400;
+        throw error;
     }
 
     return coursesData.createCourse(courseData);
 }
 
 // 4. עדכון קורס קיים
-export function updateCourse(id, courseData) {
+export async function updateCourse(id, courseData) {
     // אם הקורס לא קיים – getCourseById כבר זורק שגיאה עם סטטוס 404
-    getCourseById(id);
+    await getCourseById(id);
 
     return coursesData.updateCourse(id, courseData);
 }
 
 // 5. מחיקת קורס
-export function deleteCourse(id) {
+export async function deleteCourse(id) {
     // אם הקורס לא קיים – getCourseById כבר זורק שגיאה עם סטטוס 404
-    getCourseById(id);
+    await getCourseById(id);
 
-    coursesData.deleteCourse(id);
+    await coursesData.deleteCourse(id);
 }

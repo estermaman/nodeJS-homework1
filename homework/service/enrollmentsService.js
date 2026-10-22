@@ -3,28 +3,38 @@ import * as studentsData from '../data/studentsData.js';
 import * as coursesData from '../data/coursesData.js';
 
 // 1. קבלת כל ההרשמות במערכת
-export function getAllEnrollments() {
+export async function getAllEnrollments() {
     return enrollmentsData.findAllEnrollments();
 }
 
 // 2. ביצוע הרשמה של תלמיד לקורס (עם כל הבדיקות העסקיות)
-export function enrollStudentToCourse(studentId, courseId) {
+export async function enrollStudentToCourse(studentId, courseId) {
+    // שלוש הבדיקות בלתי תלויות זו בזו, ולכן מריצים אותן במקביל עם Promise.all
+    const [student, course, existingEnrollment] = await Promise.all([
+        studentsData.findStudentById(studentId),
+        coursesData.findCourseById(courseId),
+        enrollmentsData.findEnrollmentByStudentAndCourse(studentId, courseId)
+    ]);
+
     // א. בדיקה שהתלמיד קיים בשכבת הנתונים של התלמידים
-    const student = studentsData.findStudentById(studentId);
     if (!student) {
-        throw new Error(`תלמיד עם מזהה ${studentId} לא נמצא במערכת`);
+        const error = new Error(`תלמיד עם מזהה ${studentId} לא נמצא במערכת`);
+        error.status = 404;
+        throw error;
     }
 
     // ב. בדיקה שהקורס קיים בשכבת הנתונים של הקורסים
-    const course = coursesData.findCourseById(courseId);
     if (!course) {
-        throw new Error(`קורס עם מזהה ${courseId} לא נמצא במערכת`);
+        const error = new Error(`קורס עם מזהה ${courseId} לא נמצא במערכת`);
+        error.status = 404;
+        throw error;
     }
 
-    // ג. בדיקה מול שכבת הנתונים של ההרשמות שהתלמיד לא נרשם כבר לקורס הזה
-    const existingEnrollment = enrollmentsData.findEnrollmentByStudentAndCourse(studentId, courseId);
+    // ג. בדיקה שהתלמיד לא נרשם כבר לקורס הזה
     if (existingEnrollment) {
-        throw new Error('התלמיד כבר רשום לקורס זה');
+        const error = new Error('התלמיד כבר רשום לקורס זה');
+        error.status = 400;
+        throw error;
     }
 
     // ד. אם הכל תקין – מבצעים את ההרשמה
@@ -32,18 +42,20 @@ export function enrollStudentToCourse(studentId, courseId) {
 }
 
 // 3. שליפת כל הקורסים שרשום אליהם תלמיד מסוים
-export function getCoursesForStudent(studentId) {
-    const student = studentsData.findStudentById(studentId);
+export async function getCoursesForStudent(studentId) {
+    const student = await studentsData.findStudentById(studentId);
     if (!student) {
-        throw new Error(`תלמיד עם מזהה ${studentId} לא נמצא במערכת`);
+        const error = new Error(`תלמיד עם מזהה ${studentId} לא נמצא במערכת`);
+        error.status = 404;
+        throw error;
     }
 
     return enrollmentsData.findEnrollmentsByStudentId(studentId);
 }
 
 // 4. שליפת הרשמה בודדת לפי ID (עם בדיקת קיום)
-export function getEnrollmentById(id) {
-    const enrollment = enrollmentsData.findEnrollmentById(id);
+export async function getEnrollmentById(id) {
+    const enrollment = await enrollmentsData.findEnrollmentById(id);
     if (!enrollment) {
         const error = new Error(`הרשמה עם מזהה ${id} לא נמצאה`);
         error.status = 404;
@@ -53,9 +65,9 @@ export function getEnrollmentById(id) {
 }
 
 // 5. עדכון הרשמה קיימת
-export function updateEnrollment(id, enrollmentData) {
+export async function updateEnrollment(id, enrollmentData) {
     // אם ההרשמה לא קיימת – getEnrollmentById כבר זורק שגיאה עם סטטוס 404
-    getEnrollmentById(id);
+    await getEnrollmentById(id);
 
     // מעדכנים רק את studentId ו-courseId, אם נשלחו
     const allowedData = {};
@@ -66,13 +78,22 @@ export function updateEnrollment(id, enrollmentData) {
         allowedData.courseId = Number(enrollmentData.courseId);
     }
 
-    // אם עודכנו מזהים – בודקים שהם מצביעים על רשומות קיימות
-    if (allowedData.studentId !== undefined && !studentsData.findStudentById(allowedData.studentId)) {
+    // אם עודכנו מזהים – בודקים במקביל שהם מצביעים על רשומות קיימות
+    const [student, course] = await Promise.all([
+        allowedData.studentId !== undefined
+            ? studentsData.findStudentById(allowedData.studentId)
+            : null,
+        allowedData.courseId !== undefined
+            ? coursesData.findCourseById(allowedData.courseId)
+            : null
+    ]);
+
+    if (allowedData.studentId !== undefined && !student) {
         const error = new Error(`תלמיד עם מזהה ${allowedData.studentId} לא נמצא במערכת`);
         error.status = 400;
         throw error;
     }
-    if (allowedData.courseId !== undefined && !coursesData.findCourseById(allowedData.courseId)) {
+    if (allowedData.courseId !== undefined && !course) {
         const error = new Error(`קורס עם מזהה ${allowedData.courseId} לא נמצא במערכת`);
         error.status = 400;
         throw error;
@@ -82,9 +103,9 @@ export function updateEnrollment(id, enrollmentData) {
 }
 
 // 6. מחיקת הרשמה
-export function deleteEnrollment(id) {
+export async function deleteEnrollment(id) {
     // אם ההרשמה לא קיימת – getEnrollmentById כבר זורק שגיאה עם סטטוס 404
-    getEnrollmentById(id);
+    await getEnrollmentById(id);
 
-    enrollmentsData.deleteEnrollment(id);
+    await enrollmentsData.deleteEnrollment(id);
 }

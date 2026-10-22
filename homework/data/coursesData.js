@@ -1,41 +1,68 @@
-const courses = [
-    { id: 501, title: "Node.js & Express", hours: 40 },
-    { id: 502, title: "React Fundamentals", hours: 50 }
-];
+// data/coursesData.js
+// שכבת הנתונים של הקורסים - קוראת וכותבת מקובץ JSON באופן א-סינכרוני
+
+import { readJson, writeJson } from './fileStore.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// נתיב מוחלט לקובץ courses.json
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const COURSES_PATH = path.join(currentDir, 'courses.json');
+
+// מחזיר את המזהה הבא: המקסימום הקיים ועוד אחד
+function nextId(courses) {
+    if (courses.length === 0) return 1;
+    return Math.max(...courses.map(c => c.id)) + 1;
+}
+
 // 1. שליפת כל הקורסים
-export function findAllCourses() {
-    return courses;
+export async function findAllCourses() {
+    return readJson(COURSES_PATH);
 }
 
 // 2. שליפת קורס בודד לפי ID
-export function findCourseById(id) {
+export async function findCourseById(id) {
+    const courses = await readJson(COURSES_PATH);
     return courses.find(c => c.id === id);
 }
 
 // 3. הוספת קורס חדש
-export function createCourse(courseData) {
+export async function createCourse(courseData) {
+    const courses = await readJson(COURSES_PATH);
+
     const newCourse = {
-        id: courses.length + 101, // דוגמה למזהה
+        id: nextId(courses),
         ...courseData
     };
+
     courses.push(newCourse);
+    await writeJson(COURSES_PATH, courses);
+
     return newCourse;
 }
 
 // 4. עדכון קורס
-export function updateCourse(id, updatedData) {
+export async function updateCourse(id, updatedData) {
+    const courses = await readJson(COURSES_PATH);
+
     const index = courses.findIndex(c => c.id === id);
     if (index === -1) return null;
 
     courses[index] = { ...courses[index], ...updatedData };
+    await writeJson(COURSES_PATH, courses);
+
     return courses[index];
 }
 
 // 5. מחיקת קורס
-export function deleteCourse(id) {
+export async function deleteCourse(id) {
+    const courses = await readJson(COURSES_PATH);
+
     const index = courses.findIndex(c => c.id === id);
     if (index === -1) return false;
 
     courses.splice(index, 1);
+    await writeJson(COURSES_PATH, courses);
+
     return true;
 }
